@@ -40,17 +40,15 @@ jobs:
           # 3. Copy binary AND flutter helper folders (lib/ and data/)
           cp -r build/linux/arm64/release/bundle/* debian_pkg/usr/local/bin/
           
-          # 4. Create control file (Required for .deb)
-          cat <<EOF > debian_pkg/DEBIAN/control
-Package: mangayomi
-Version: 1.0.0
-Section: utils
-Priority: optional
-Architecture: arm64
-Maintainer: yourname
-Depends: libgtk-3-0, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37, libmpv2 | libmpv1, libvlc5, libsqlite3-0
-Description: Mangayomi ARM64 build
-EOF
+          # 4. Create control file using echo (Bypasses YAML indentation errors)
+          echo "Package: mangayomi" > debian_pkg/DEBIAN/control
+          echo "Version: 1.0.0" >> debian_pkg/DEBIAN/control
+          echo "Section: utils" >> debian_pkg/DEBIAN/control
+          echo "Priority: optional" >> debian_pkg/DEBIAN/control
+          echo "Architecture: arm64" >> debian_pkg/DEBIAN/control
+          echo "Maintainer: yourname" >> debian_pkg/DEBIAN/control
+          echo "Depends: libgtk-3-0, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37, libmpv2 | libmpv1, libvlc5, libsqlite3-0" >> debian_pkg/DEBIAN/control
+          echo "Description: Mangayomi ARM64 build" >> debian_pkg/DEBIAN/control
           
           # 5. Build the .deb
           dpkg-deb --build debian_pkg mangayomi_arm64.deb
