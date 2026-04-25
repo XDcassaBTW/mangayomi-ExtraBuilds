@@ -1,0 +1,61 @@
+name: Build ARM64 DEB
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows you to manually trigger the build
+
+jobs:
+  build:
+    # Use the native ARM64 runner
+    runs-on: ubuntu-24.04-arm
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y clang cmake ninja-build pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libmpv-dev build-essential libsqlite3-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Build and Package
+        run: |
+          # 1. Build the binary
+          flutter pub get
+          flutter build linux --release
+          
+          # 2. Prepare structure for .deb
+          mkdir -p debian_pkg/usr/local/bin
+          mkdir -p debian_pkg/DEBIAN
+          
+          # 3. Copy binary
+          cp build/linux/arm64/release/bundle/mangayomi debian_pkg/usr/local/bin/
+          
+          # 4. Create control file (Required for .deb)
+          cat <<EOF > debian_pkg/DEBIAN/control
+          Package: mangayomi
+          Version: 1.0.0
+          Section: utils
+          Priority: optional
+          Architecture: arm64
+          Maintainer: yourname
+          Description: Mangayomi ARM64 build
+          EOF
+          
+          # 5. Build the .deb
+          dpkg-deb --build debian_pkg mangayomi_arm64.deb
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mangayomi-deb-arm64
+          path: mangayomi_arm64.deb
