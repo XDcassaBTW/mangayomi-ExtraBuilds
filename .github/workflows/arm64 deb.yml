@@ -3,11 +3,10 @@ name: Build ARM64 DEB
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Allows you to manually trigger the build
+  workflow_dispatch:
 
 jobs:
   build:
-    # Use the native ARM64 runner
     runs-on: ubuntu-24.04-arm
     
     steps:
@@ -17,7 +16,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y clang cmake ninja-build pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libmpv-dev build-essential libsqlite3-dev
+          sudo apt install -y clang cmake ninja-build pkg-config libgtk-3-dev \
+          libwebkit2gtk-4.1-dev libmpv-dev build-essential libsqlite3-dev
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -30,28 +30,34 @@ jobs:
       - name: Build and Package
         run: |
           # 1. Build the binary
-          flutter pub get
-          flutter build linux --release
+          flutter/bin/flutter pub get
+          flutter/bin/flutter build linux --release
           
           # 2. Prepare structure for .deb
-          mkdir -p debian_pkg/usr/local/bin
+          # We use /opt/ because Flutter apps need their 'lib' folder kept with them
+          mkdir -p debian_pkg/opt/mangayomi
+          mkdir -p debian_pkg/usr/bin
           mkdir -p debian_pkg/DEBIAN
           
-          # 3. Copy binary
-          cp build/linux/arm64/release/bundle/mangayomi debian_pkg/usr/local/bin/
+          # 3. Copy the ENTIRE bundle (This fixes the .so missing error)
+          cp -r build/linux/arm64/release/bundle/* debian_pkg/opt/mangayomi/
           
-          # 4. Create control file (Required for .deb)
+          # 4. Create a symlink so you can run it via 'mangayomi' command
+          ln -s /opt/mangayomi/mangayomi debian_pkg/usr/bin/mangayomi
+          
+          # 5. Create control file with explicit dependencies
           cat <<EOF > debian_pkg/DEBIAN/control
-          Package: mangayomi
-          Version: 1.0.0
-          Section: utils
-          Priority: optional
-          Architecture: arm64
-          Maintainer: yourname
-          Description: Mangayomi ARM64 build
-          EOF
+Package: mangayomi
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: arm64
+Maintainer: yourname
+Depends: libgtk-3-0, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37, libmpv2 | libmpv1, libvlc5, libsqlite3-0
+Description: Mangayomi ARM64 build with bundled Flutter libraries
+EOF
           
-          # 5. Build the .deb
+          # 6. Build the .deb
           dpkg-deb --build debian_pkg mangayomi_arm64.deb
 
       - name: Upload Artifact
