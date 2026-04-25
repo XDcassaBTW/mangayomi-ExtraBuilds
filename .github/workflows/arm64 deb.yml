@@ -30,22 +30,22 @@ jobs:
       - name: Build and Package
         run: |
           # 1. Build the binary
-          flutter/bin/flutter pub get
-          flutter/bin/flutter build linux --release
+          # Use absolute path to ensure GitHub runner finds the cloned flutter
+          $GITHUB_WORKSPACE/flutter/bin/flutter pub get
+          $GITHUB_WORKSPACE/flutter/bin/flutter build linux --release
           
           # 2. Prepare structure for .deb
-          # We use /opt/ because Flutter apps need their 'lib' folder kept with them
           mkdir -p debian_pkg/opt/mangayomi
           mkdir -p debian_pkg/usr/bin
           mkdir -p debian_pkg/DEBIAN
           
-          # 3. Copy the ENTIRE bundle (This fixes the .so missing error)
+          # 3. Copy the ENTIRE bundle
           cp -r build/linux/arm64/release/bundle/* debian_pkg/opt/mangayomi/
           
-          # 4. Create a symlink so you can run it via 'mangayomi' command
+          # 4. Create a symlink
           ln -s /opt/mangayomi/mangayomi debian_pkg/usr/bin/mangayomi
           
-          # 5. Create control file with explicit dependencies
+          # 5. Create control file
           cat <<EOF > debian_pkg/DEBIAN/control
 Package: mangayomi
 Version: 1.0.0
